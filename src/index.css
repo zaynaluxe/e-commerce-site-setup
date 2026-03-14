@@ -1,0 +1,233 @@
+@import "tailwindcss";
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Description content */
+.description-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.description-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 10px 0;
+  display: block;
+}
+
+/* ============================================
+   SCROLL REVEAL ANIMATIONS
+   ============================================ */
+
+[class*="reveal-"] {
+  opacity: 0;
+  will-change: opacity, transform;
+  transition-property: opacity, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: var(--reveal-duration, 700ms);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal-active {
+  opacity: 1;
+  transform: translate(0, 0) scale(1);
+}
+
+.reveal-fade-up {
+  transform: translateY(50px);
+}
+
+.reveal-fade-in {
+  transform: scale(0.95);
+}
+
+.reveal-scale-up {
+  transform: scale(0.9);
+}
+
+/* ============================================
+   CATEGORY ANIMATIONS
+   ============================================ */
+
+.category-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.category-card img {
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.category-card:hover img {
+  transform: scale(1.1);
+}
+
+.category-card .category-overlay {
+  transition: background-color 0.4s ease;
+}
+
+.category-card:hover .category-overlay {
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+.category-card .category-content {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.category-card:hover .category-content {
+  transform: translateY(-5px);
+}
+
+/* ============================================
+   PRODUCT CARD STYLES
+   ============================================ */
+
+/* Image hover zoom */
+.product-card .group:hover .group-hover\:scale-110 {
+  transform: scale(1.1);
+}
+
+/* Quick view button animation */
+.product-card .quick-view-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.product-card:hover .quick-view-enter {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Color swatch ring */
+.color-swatch-ring {
+  box-shadow: 0 0 0 1.5px #fff, 0 0 0 3px #1a1a1a;
+}
+
+/* ============================================
+   PRODUCT GRID SECTION
+   ============================================ */
+
+.product-grid-section {
+  position: relative;
+}
+
+/* Section divider line */
+.product-grid-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e5e5e5, transparent);
+}
+
+/* ============================================
+   HERO ANIMATIONS
+   ============================================ */
+
+.hero-section {
+  overflow: hidden;
+}
+
+.hero-content {
+  animation: heroFadeInUp 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  opacity: 0;
+}
+
+.hero-title {
+  animation: heroFadeInUp 1s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
+  opacity: 0;
+}
+
+.hero-subtitle {
+  animation: heroFadeInUp 1s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
+  opacity: 0;
+}
+
+.hero-button {
+  animation: heroFadeInUp 1s cubic-bezier(0.4, 0, 0.2, 1) 0.6s forwards;
+  opacity: 0;
+}
+
+@keyframes heroFadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   ADDITIONAL STYLES
+   ============================================ */
+
+a, button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth transitions */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Footer link hover */
+.footer-link {
+  position: relative;
+}
+
+.footer-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background-color: currentColor;
+  transition: width 0.3s ease;
+}
+
+.footer-link:hover::after {
+  width: 100%;
+}
+
+/* Cart drawer */
+.cart-drawer {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  html {
+    scroll-behavior: auto;
+  }
+}
+
