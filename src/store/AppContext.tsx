@@ -8,8 +8,11 @@ import {
   createOrder as saveOrderToSupabase,
   deleteProduct as deleteFromSupabase,
   updateProduct as updateProductInSupabase,
-  invalidateProductsCache
+  invalidateProductsCache,
+  updateOrderStatusInDB
 } from '../services/supabaseService';
+
+import { supabase } from '../services/supabaseClient';
 
 interface AppContextType {
   products: Product[];
@@ -43,7 +46,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(true);
 
-  // ✅ Charger les produits depuis Supabase avec état de chargement
   useEffect(() => {
     setLoadingProducts(true);
     loadProducts({ limit: 100 })
@@ -51,22 +53,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoadingProducts(false));
   }, []);
 
-  // ✅ Panier en mémoire (se réinitialise au rechargement — normal pour un panier)
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // ✅ Commandes chargées depuis Supabase avec état de chargement
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
+    // 1. Chargement initial
     setLoadingOrders(true);
     loadOrders()
       .then(data => { if (data) setOrders(data); })
       .finally(() => setLoadingOrders(false));
+
+    // 2. ✅ Écoute en temps réel
+    const subscription = supabase
+      .channel('orders-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload) => {
+          // Recharger toutes les commandes dès qu'il y a un changement
+          loadOrders().then(data => { if (data) setOrders(data); });
+        }
+      )
+      .subscribe();
+
+    // 3. Cleanup quand le composant se démonte
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // ✅ Direction conservée dans localStorage (données légères, aucun risque)
   const [direction, setDirection] = useState<'ltr' | 'rtl'>(() => {
     try { return (localStorage.getItem('direction') as 'ltr' | 'rtl') || 'ltr'; }
     catch { return 'ltr'; }
@@ -100,7 +118,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       originalPrice: product.originalPrice
     };
 
-    // Mise à jour optimiste (affichage immédiat)
     setProducts(prev => [...prev, newProduct]);
     await saveToSupabase(newProduct);
   };
@@ -169,6 +186,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateOrderStatus = (orderId: string, status: Order['status']) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    updateOrderStatusInDB(orderId, status); // ✅ sauvegardé dans Supabase
   };
 
   const getProductsByCategory = (category: string) => {

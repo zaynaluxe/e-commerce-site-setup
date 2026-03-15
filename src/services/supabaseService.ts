@@ -1,9 +1,11 @@
 import { supabase } from "./supabaseClient";
 import { Product } from "../types";
 
-// ✅ Cache mémoire (rapide, session courante)
+// Cache produits
 const memoryCache: Record<string, { data: Product[]; timestamp: number }> = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+
 
 export async function uploadImage(file: File): Promise<string | null> {
   try {
@@ -38,12 +40,10 @@ export async function loadProducts(options: LoadProductsOptions = {}): Promise<P
   const cacheKey = `products_${category || 'all'}_${offset}`;
   const now = Date.now();
 
-  // ✅ 1. Cache mémoire (le plus rapide)
   if (memoryCache[cacheKey] && now - memoryCache[cacheKey].timestamp < CACHE_TTL) {
     return memoryCache[cacheKey].data;
   }
 
-  // ✅ 2. Cache sessionStorage (survit à la navigation, pas au rechargement de page)
   try {
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
@@ -55,7 +55,6 @@ export async function loadProducts(options: LoadProductsOptions = {}): Promise<P
     }
   } catch (_) {}
 
-  // ✅ 3. Requête Supabase (seulement si pas en cache)
   let query = supabase
     .from("products")
     .select(`
@@ -89,8 +88,6 @@ export async function loadProducts(options: LoadProductsOptions = {}): Promise<P
   }));
 
   const entry = { data: products, timestamp: now };
-
-  // Sauvegarder dans les deux caches
   memoryCache[cacheKey] = entry;
   try { sessionStorage.setItem(cacheKey, JSON.stringify(entry)); } catch (_) {}
 
@@ -98,9 +95,7 @@ export async function loadProducts(options: LoadProductsOptions = {}): Promise<P
 }
 
 export function invalidateProductsCache(): void {
-  // Vider cache mémoire
   Object.keys(memoryCache).forEach(key => delete memoryCache[key]);
-  // Vider sessionStorage
   try {
     Object.keys(sessionStorage)
       .filter(k => k.startsWith('products_'))
@@ -126,6 +121,16 @@ export async function loadOrders(): Promise<any[]> {
     status: o.status,
     date: o.created_at
   }));
+}
+
+
+
+export async function updateOrderStatusInDB(orderId: string, status: string) {
+  const { error } = await supabase
+    .from("orders")
+    .update({ status })
+    .eq("id", orderId);
+  if (error) console.error('Erreur update statut:', error);
 }
 
 export async function addProduct(product: any) {

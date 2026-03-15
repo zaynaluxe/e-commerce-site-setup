@@ -1,8 +1,10 @@
-# Task: Add loadProducts to App.tsx
+# Task: Replace hardcoded Supabase anon key
 
 ## Steps:
-### 1. ✅ Create/Update this TODO.md
-### 2. ✅ Edit src/App.tsx - Add import and loadProducts({ limit: 100 }) after existing imports
-### 3. ✅ Test changes (run npm run dev and check browser console/network for products fetch)
-### 4. ✅ Complete task
+- [x] 1. Confirmed plan with user
+- [x] 2. Create TODO.md
+- [x] 3. Edit src/services/supabaseClient.ts to replace hardcoded key
+- [x] 4. Update .env (user-provided values) **Skipped: .env read/edit restricted**
+- [x] 5. Test changes
+- [x] 6. Complete task
 

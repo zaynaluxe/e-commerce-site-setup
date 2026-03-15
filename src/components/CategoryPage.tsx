@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import ProductGrid from './ProductGrid';
 import { Product } from '../types';
-import { loadProducts } from '../services/supabaseService';
+import { supabase } from '../services/supabaseClient';
 import ScrollReveal from './ScrollReveal';
 
 const categoryNames: Record<string, string> = {
@@ -28,69 +28,75 @@ export default function CategoryPage() {
   const { category } = useParams<{ category: string }>();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const limit = 16;
 
   const categoryId = category || 'all';
-  const displayCategoryName = category ? categoryNames[category as keyof typeof categoryNames] || category : 'Tous les produits';
-  const categoryImage = category ? categoryImages[category as keyof typeof categoryImages] || '' : '';
+  const displayCategoryName = category
+    ? categoryNames[category as keyof typeof categoryNames] || category
+    : 'Tous les produits';
+  const categoryImage = category
+    ? categoryImages[category as keyof typeof categoryImages] || ''
+    : '';
 
-  const fetchProducts = useCallback(async (append = false) => {
+  // ✅ Requête directe Supabase, sans cache, avec bon filtre
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
     try {
-      const opts = { 
-        limit, 
-        offset: append ? offset : 0, 
-        category: categoryId === 'all' ? undefined : categoryId 
-      };
+      let query = supabase
+        .from('products')
+        .select(`
+          id, name, price, original_price, description,
+          image, images, category, subcategory,
+          colors, sizes, in_stock, is_new, text_direction
+        `);
+
+      // ✅ Filtres directs dans Supabase (pas côté client)
       if (categoryId === 'new') {
-        opts.category = undefined; // fetch all and filter client for is_new
+        query = query.eq('is_new', true);
       } else if (categoryId === 'sale') {
-        opts.category = undefined; // fetch all and filter client for originalPrice
+        query = query.not('original_price', 'is', null);
+      } else if (categoryId !== 'all') {
+        query = query.or(`category.eq.${categoryId},subcategory.eq.${categoryId}`);
       }
-      
-      const newProducts = await loadProducts(opts);
-      
-      setProducts(prev => append ? [...prev, ...newProducts] : newProducts);
-      setOffset(append ? offset + limit : limit);
-      setHasMore(newProducts.length === limit);
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Erreur chargement produits:', error);
+        setProducts([]);
+        return;
+      }
+
+      const mapped: Product[] = (data || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        originalPrice: p.original_price,
+        description: p.description,
+        image: p.image,
+        images: p.images || [p.image],
+        category: p.category,
+        subcategory: p.subcategory,
+        colors: p.colors,
+        sizes: p.sizes,
+        inStock: p.in_stock,
+        isNew: p.is_new,
+        textDirection: p.text_direction,
+      }));
+
+      setProducts(mapped);
     } catch (error) {
-      console.error('Error fetching category products:', error);
+      console.error('Erreur:', error);
+      setProducts([]);
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
-  }, [categoryId, offset, limit]);
+  }, [categoryId]);
 
-  const loadMore = async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    await fetchProducts(true);
-  };
-
-  // Initial load
   useEffect(() => {
     window.scrollTo(0, 0);
     setProducts([]);
-    setOffset(0);
-    setHasMore(true);
-    setLoading(true);
-    fetchProducts(false);
+    fetchProducts();
   }, [category]);
-
-  // Sale/new filter client-side if needed
-  const displayProducts = React.useMemo(() => {
-    if (!category || products.length === 0) return products;
-    
-    if (category === 'new') {
-      return products.filter(p => p.isNew);
-    }
-    if (category === 'sale') {
-      return products.filter(p => p.originalPrice);
-    }
-    return products;
-  }, [products, category]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -105,7 +111,7 @@ export default function CategoryPage() {
                 {displayCategoryName.toUpperCase()}
               </h1>
               <p className="text-sm tracking-widest opacity-90">
-                {displayProducts.length} produit{displayProducts.length > 1 ? 's' : ''}
+                {loading ? '...' : `${products.length} produit${products.length > 1 ? 's' : ''}`}
               </p>
             </ScrollReveal>
           </div>
@@ -114,8 +120,8 @@ export default function CategoryPage() {
 
       {/* Back Button */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className="inline-flex items-center text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
@@ -126,16 +132,23 @@ export default function CategoryPage() {
       {/* Products Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         {loading ? (
-          <div className="text-center py-20">
-            <p className="text-neutral-500">Chargement des produits...</p>
+          // ✅ Skeleton au lieu de texte
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="space-y-3">
+                <div className="aspect-square bg-neutral-100 animate-pulse rounded-lg" />
+                <div className="h-4 bg-neutral-100 animate-pulse rounded w-3/4" />
+                <div className="h-4 bg-neutral-100 animate-pulse rounded w-1/2" />
+              </div>
+            ))}
           </div>
-        ) : displayProducts.length > 0 ? (
+        ) : products.length > 0 ? (
           <ProductGrid
             title=""
-            products={displayProducts}
-            loadMore={loadMore}
-            hasMore={hasMore}
-            loadingMore={loadingMore}
+            products={products}
+            loadMore={() => {}}
+            hasMore={false}
+            loadingMore={false}
           />
         ) : (
           <div className="text-center py-20">
@@ -149,4 +162,3 @@ export default function CategoryPage() {
     </div>
   );
 }
-
